@@ -347,6 +347,8 @@ mainLogo.addEventListener("click", () => {
         alert("Admin management controls unlocked.");
         clickCount = 0;
     }
+});
+
 function updateApiDisplay() {
     const disp = document.getElementById("current-api-display");
     const input = document.getElementById("api-url-input");
@@ -374,15 +376,55 @@ if (btnSaveApi) {
         API_BASE = getApiBase();
         updateApiDisplay();
         fetchStats();
+        fetchPasses();
     });
 }
 
-// Auto-unlock if isLoggedIn is stored in localStorage
+const btnReset = document.getElementById("btn-reset-db");
+if (btnReset) {
+    btnReset.addEventListener("click", () => {
+        if (!confirm("Are you sure you want to reset all attendance records back to Pending?")) return;
+        showToast("Resetting attendance records...");
+        fetch(`${API_BASE}/reset`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            hideToast();
+            alert(data.message || "Attendance records reset successfully.");
+            fetchStats();
+            fetchPasses();
+        })
+        .catch(err => {
+            hideToast();
+            alert("Error resetting attendance records.");
+        });
+    });
+}
+
+const btnDelete = document.getElementById("btn-delete-db");
+if (btnDelete) {
+    btnDelete.addEventListener("click", () => {
+        if (!confirm("WARNING: Are you sure you want to DELETE ALL participants from the database? This cannot be undone!")) return;
+        showToast("Deleting all participants...");
+        fetch(`${API_BASE}/delete-all`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            hideToast();
+            alert(data.message || "All participants deleted.");
+            fetchStats();
+            fetchPasses();
+        })
+        .catch(err => {
+            hideToast();
+            alert("Error deleting participants.");
+        });
+    });
+}
+
+// Auto-unlock & auto-load stats/passes on window load
 window.addEventListener("load", () => {
+    unlockManagement();
     updateApiDisplay();
-    if (localStorage.getItem("isLoggedIn") === "true") {
-        unlockManagement();
-    }
-    // Auto-start the QR scanner when page loads
     startScanner();
+    fetchStats();
+    fetchPasses();
 });
