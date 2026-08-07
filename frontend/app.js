@@ -132,7 +132,11 @@ function onScanSuccess(decodedText) {
 
     showToast("Verifying participant pass...");
 
-    // Perform fast lookup
+    if (useDirectSupabase) {
+        return verifyDirectSupabase(decodedText, "lookup");
+    }
+
+    // Perform fast lookup via backend, fallback to direct Supabase if fetch fails
     fetch(`${API_BASE}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,10 +148,68 @@ function onScanSuccess(decodedText) {
         displayParticipantPanel(data);
     })
     .catch(err => {
-        hideToast();
-        console.error("Verification error", err);
-        displayInvalidPanel("Unable to verify right now. Please try again.");
+        console.warn("Backend verify lookup failed, attempting direct Supabase fallback...", err);
+        verifyDirectSupabase(decodedText, "lookup");
     });
+}
+
+async function verifyDirectSupabase(token, action) {
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?qr_token=eq.${token}`,
+            { headers: SUPABASE_HEADERS }
+        );
+        const rows = await res.json();
+        hideToast();
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            displayParticipantPanel({ status: "invalid" });
+            return;
+        }
+
+        const p = rows[0];
+        const isPresent = p.attendance_status === "Present" || p.attendance_status === "Checked In";
+        const nowTime = new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+
+        if (action === "mark") {
+            if (!isPresent) {
+                await fetch(
+                    `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?qr_token=eq.${token}`,
+                    {
+                        method: "PATCH",
+                        headers: SUPABASE_HEADERS,
+                        body: JSON.stringify({ attendance_status: "Present", check_in_time: nowTime })
+                    }
+                );
+            }
+            const banner = document.getElementById("status-banner");
+            banner.className = "status-banner valid";
+            banner.innerText = `✓ PRESENT — Check-in: ${nowTime}`;
+            document.getElementById("part-status-badge").innerHTML = `<span class="badge green">Present</span>`;
+            document.getElementById("part-checkin-time").innerText = nowTime;
+            document.getElementById("btn-mark-present").classList.add("hidden");
+            document.getElementById("btn-scan-next").classList.remove("hidden");
+            fetchStats();
+            fetchPasses();
+            return;
+        }
+
+        displayParticipantPanel({
+            status: isPresent ? "used" : "valid_lookup",
+            name: p.participant_name,
+            registration_id: p.registration_id || token,
+            team_name: p.team_name || "N/A",
+            college: p.college_name || "IERT Prayagraj",
+            role: p.participant_role || "Participant",
+            already_checked_in: isPresent,
+            attendance_status: isPresent ? "Present" : "Pending",
+            check_in_time: p.check_in_time
+        });
+    } catch(e) {
+        hideToast();
+        console.error("Direct Supabase verify error:", e);
+        displayInvalidPanel("Unable to verify right now. Please check network connection.");
+    }
 }
 
 function displayParticipantPanel(data) {
@@ -225,6 +287,10 @@ document.getElementById("btn-mark-present").addEventListener("click", () => {
 
     showToast("Recording attendance...");
 
+    if (useDirectSupabase) {
+        return verifyDirectSupabase(currentScannedToken, "mark");
+    }
+
     fetch(`${API_BASE}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -249,8 +315,8 @@ document.getElementById("btn-mark-present").addEventListener("click", () => {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     })
     .catch(err => {
-        hideToast();
-        alert("Failed to mark attendance. Please check network connection.");
+        console.warn("Backend mark present failed, attempting direct Supabase fallback...", err);
+        verifyDirectSupabase(currentScannedToken, "mark");
     });
 });
 
@@ -326,41 +392,81 @@ document.getElementById("btn-refresh-passes").addEventListener("click", () => fe
 function fetchPasses() {
     showToast("Loading directory list...");
     
+    if (useDirectSupabase) {
+        return fetchPassesDirectSupabase();
+    }
+
     fetch(`${API_BASE}/passes`)
     .then(res => res.json())
     .then(data => {
         hideToast();
         if (data.status === "success") {
-            const tableBody = document.querySelector("#passes-table tbody");
-            if (!data.data || data.data.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">No registered participants found in database.</td></tr>`;
-                return;
-            }
-
-            let rowsHtml = "";
-            data.data.forEach(pass => {
-                const isUsed = pass.used;
-                const badge = isUsed 
-                    ? `<span class="badge orange">Present</span>` 
-                    : `<span class="badge green">Pending</span>`;
-                
-                rowsHtml += `
-                    <tr>
-                        <td><strong>${pass.participant_name || pass.student_name}</strong></td>
-                        <td>${pass.team_name || 'N/A'}</td>
-                        <td><span style="color:#94a3b8">${pass.branch || 'N/A'}</span></td>
-                        <td>${badge}</td>
-                        <td>${pass.check_in_time || '-'}</td>
-                    </tr>
-                `;
-            });
-            tableBody.innerHTML = rowsHtml;
+            renderPassesTable(data.data);
         }
     })
     .catch(err => {
-        hideToast();
-        console.error("Error fetching passes", err);
+        console.warn("Backend passes fetch failed, attempting direct Supabase fallback...", err);
+        fetchPassesDirectSupabase();
     });
+}
+
+async function fetchPassesDirectSupabase() {
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=participant_name,team_name,college_name,attendance_status,check_in_time`,
+            { headers: SUPABASE_HEADERS }
+        );
+        const rows = await res.json();
+        hideToast();
+
+        if (!Array.isArray(rows)) {
+            renderPassesTable([]);
+            return;
+        }
+
+        const data = rows.map(r => {
+            const isUsed = r.attendance_status === "Present" || r.attendance_status === "Checked In";
+            return {
+                participant_name: r.participant_name,
+                team_name: r.team_name || "N/A",
+                branch: r.college_name || "N/A",
+                used: isUsed,
+                check_in_time: r.check_in_time || "-"
+            };
+        });
+
+        renderPassesTable(data);
+    } catch(e) {
+        hideToast();
+        console.error("Direct Supabase fetch passes error:", e);
+    }
+}
+
+function renderPassesTable(passes) {
+    const tableBody = document.querySelector("#passes-table tbody");
+    if (!passes || passes.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">No registered participants found in database.</td></tr>`;
+        return;
+    }
+
+    let rowsHtml = "";
+    passes.forEach(pass => {
+        const isUsed = pass.used;
+        const badge = isUsed 
+            ? `<span class="badge orange">Present</span>` 
+            : `<span class="badge green">Pending</span>`;
+        
+        rowsHtml += `
+            <tr>
+                <td><strong>${pass.participant_name || pass.student_name}</strong></td>
+                <td>${pass.team_name || 'N/A'}</td>
+                <td><span style="color:#94a3b8">${pass.branch || 'N/A'}</span></td>
+                <td>${badge}</td>
+                <td>${pass.check_in_time || '-'}</td>
+            </tr>
+        `;
+    });
+    tableBody.innerHTML = rowsHtml;
 }
 
 // Download QR ZIP
