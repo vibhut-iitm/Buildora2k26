@@ -1,10 +1,17 @@
-const IS_LOCAL = window.location.hostname === "127.0.0.1" || 
-                 window.location.hostname === "localhost" || 
-                 window.location.hostname.startsWith("192.168.");
+function getApiBase() {
+    const saved = localStorage.getItem("API_BASE");
+    if (saved && saved.trim()) return saved.trim().replace(/\/+$/, "");
 
-const API_BASE = IS_LOCAL
-    ? "http://127.0.0.1:8000"
-    : "https://farewell-system-ulp2.onrender.com";
+    const isLocal = window.location.hostname === "127.0.0.1" || 
+                    window.location.hostname === "localhost" || 
+                    window.location.hostname.startsWith("192.168.");
+
+    return isLocal
+        ? "http://127.0.0.1:8000"
+        : "https://farewell-system-ulp2.onrender.com";
+}
+
+let API_BASE = getApiBase();
 
 // --- Toast Non-Blocking UI Helper ---
 function showToast(msg) {
@@ -340,10 +347,39 @@ mainLogo.addEventListener("click", () => {
         alert("Admin management controls unlocked.");
         clickCount = 0;
     }
-});
+function updateApiDisplay() {
+    const disp = document.getElementById("current-api-display");
+    const input = document.getElementById("api-url-input");
+    if (disp) disp.innerText = API_BASE;
+    if (input && localStorage.getItem("API_BASE")) {
+        input.value = localStorage.getItem("API_BASE");
+    }
+}
+
+const btnSaveApi = document.getElementById("btn-save-api-url");
+if (btnSaveApi) {
+    btnSaveApi.addEventListener("click", () => {
+        const inputVal = document.getElementById("api-url-input").value;
+        if (!inputVal || !inputVal.trim()) {
+            localStorage.removeItem("API_BASE");
+            alert("Reset API URL to default.");
+        } else {
+            let url = inputVal.trim();
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://" + url;
+            }
+            localStorage.setItem("API_BASE", url);
+            alert(`Backend API URL updated to: ${url}`);
+        }
+        API_BASE = getApiBase();
+        updateApiDisplay();
+        fetchStats();
+    });
+}
 
 // Auto-unlock if isLoggedIn is stored in localStorage
 window.addEventListener("load", () => {
+    updateApiDisplay();
     if (localStorage.getItem("isLoggedIn") === "true") {
         unlockManagement();
     }
