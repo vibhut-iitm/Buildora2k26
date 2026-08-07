@@ -113,7 +113,6 @@ function startScanner() {
         onScanSuccess
     ).then(() => {
         scannerIsRunning = true;
-        if (navigator.vibrate) navigator.vibrate(40);
         console.log("Buildora QR Scanner ready.");
     }).catch(err => {
         scannerIsRunning = false;
@@ -123,24 +122,31 @@ function startScanner() {
 }
 
 function onScanSuccess(decodedText) {
-    if (decodedText === currentScannedToken) return;
-    currentScannedToken = decodedText;
+    if (!decodedText) return;
+    const cleanToken = decodedText.trim();
+    if (cleanToken === currentScannedToken && !document.getElementById("participant-panel").classList.contains("hidden")) {
+        return;
+    }
+    currentScannedToken = cleanToken;
 
     // Visual feedback on reader box
-    document.getElementById("reader").style.borderColor = "#4ade80";
-    setTimeout(() => document.getElementById("reader").style.borderColor = "var(--glass-border)", 400);
+    const readerBox = document.getElementById("reader");
+    if (readerBox) {
+        readerBox.style.borderColor = "#4ade80";
+        setTimeout(() => readerBox.style.borderColor = "var(--glass-border)", 400);
+    }
 
     showToast("Verifying participant pass...");
 
     if (useDirectSupabase) {
-        return verifyDirectSupabase(decodedText, "lookup");
+        return verifyDirectSupabase(cleanToken, "lookup");
     }
 
     // Perform fast lookup via backend, fallback to direct Supabase if fetch fails
     fetch(`${API_BASE}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: decodedText, action: "lookup" })
+        body: JSON.stringify({ token: cleanToken, action: "lookup" })
     })
     .then(res => res.json())
     .then(data => {
@@ -149,7 +155,7 @@ function onScanSuccess(decodedText) {
     })
     .catch(err => {
         console.warn("Backend verify lookup failed, attempting direct Supabase fallback...", err);
-        verifyDirectSupabase(decodedText, "lookup");
+        verifyDirectSupabase(cleanToken, "lookup");
     });
 }
 
