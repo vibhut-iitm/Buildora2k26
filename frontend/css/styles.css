@@ -1,0 +1,13 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+#reader {
+    border: 2px solid #fff;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+#result {
+    font-weight: bold;
+}

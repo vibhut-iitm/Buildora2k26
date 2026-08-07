@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Login</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #020617;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+    }
+
+    .login-box {
+      background: #0f172a;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px;
+      width: 100%;
+      background: #38bdf8;
+      border: none;
+      color: black;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #error {
+      margin-top: 10px;
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="login-box">
+  <h2>Admin Login</h2>
+
+  <input type="password" id="password" placeholder="Enter Password">
+  <button onclick="login()">Login</button>
+
+  <div id="error"></div>
+</div>
+
+<script>
+
+  const PASSWORD = "cseiert"; // updated password
+
+  function login() {
+    const input = document.getElementById("password").value;
+
+    if (input === PASSWORD) {
+      localStorage.setItem("isLoggedIn", "true");
+      window.location.href = "/";
+    } else {
+      document.getElementById("error").innerText = "Wrong Password";
+    }
+  }
+
+</script>
+
+</body>
+</html>

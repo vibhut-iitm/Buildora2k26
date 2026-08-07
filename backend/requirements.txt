@@ -1,0 +1,10 @@
+flask
+flask-cors
+requests
+gunicorn
+qrcode
+Pillow
+python-dotenv
+supabase
+scipy
+numpy

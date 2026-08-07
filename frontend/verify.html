@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verification Panel</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #020617;
+      color: white;
+      display: flex;
+      height: 100vh;
+    }
+
+    .left {
+      width: 40%;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .right {
+      width: 60%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    h1 {
+      color: #38bdf8;
+    }
+
+    #reader {
+      width: 320px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #statusBox {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      width: 80%;
+    }
+
+    .valid {
+      background: #14532d;
+      color: #22c55e;
+    }
+
+    .used {
+      background: #78350f;
+      color: #f59e0b;
+    }
+
+    .invalid {
+      background: #7f1d1d;
+      color: #ef4444;
+    }
+
+    .bigText {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .name {
+      font-size: 24px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="left">
+  <h1>Entry Verification</h1>
+  <div id="reader"></div>
+</div>
+
+<div class="right">
+  <div id="statusBox">
+    <div class="bigText">Scan a QR Code</div>
+  </div>
+</div>
+
+<script>
+  const API_URL = "http://127.0.0.1:5000/verify";
+
+  let lastScanned = "";
+
+  function playSound(type) {
+    if (type === "valid") {
+      new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3").play();
+    } else {
+      new Audio("https://www.soundjay.com/buttons/sounds/button-10.mp3").play();
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+
+    if (decodedText === lastScanned) return;
+    lastScanned = decodedText;
+
+    fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ token: decodedText })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+      const box = document.getElementById("statusBox");
+
+      if (data.status === "valid") {
+        box.className = "valid";
+        box.innerHTML = `
+          <div class="bigText">✅ ENTRY ALLOWED</div>
+          <div class="name">👤 ${data.name}</div>
+        `;
+        playSound("valid");
+      } 
+      else if (data.status === "used") {
+        box.className = "used";
+        box.innerHTML = `
+          <div class="bigText">⚠️ ALREADY ENTERED</div>
+        `;
+        playSound("error");
+      } 
+      else {
+        box.className = "invalid";
+        box.innerHTML = `
+          <div class="bigText">❌ INVALID PASS</div>
+        `;
+        playSound("error");
+      }
+    });
+  }
+
+  const html5QrCode = new Html5Qrcode("reader");
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  );
+</script>
+
+</body>
+</html>

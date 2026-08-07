@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buildora Hackathon 2026 | QR Entry & Attendance System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <!-- Non-blocking Localized Spinner Toast -->
+  <div id="toast-loader" class="toast-loader hidden">
+    <div class="spinner-small"></div>
+    <span id="toast-text">Connecting to Buildora Server...</span>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo" id="main-logo">BUILDORA <span>2026</span></div>
+
+    <div class="nav-links">
+      <button id="nav-scanner" class="active">📷 Scanner</button>
+      <button id="nav-dashboard">📊 Dashboard</button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- Scanner Section -->
+    <section id="scanner-section" class="view-section active">
+      <div class="scanner-layout">
+        
+        <!-- Left / Top: Scanner Box -->
+        <div class="scanner-card glass-panel">
+          <h2>Buildora Entry Scanner</h2>
+          <p class="subtitle">Position participant QR code within the frame.</p>
+
+          <!-- Mode Selector -->
+          <div class="mode-selector glass-panel mb-4" id="mode-toggle-btn">
+            <div class="mode-btn active">
+              <span id="scan-mode-text">Entry Verification</span>
+              <div id="hold-progress"></div>
+            </div>
+          </div>
+
+          <div id="reader"></div>
+        </div>
+
+        <!-- Right / Bottom: Verification & Participant Card -->
+        <div class="verification-card glass-panel">
+          <h3>Participant Information</h3>
+          
+          <div id="verification-default" class="verification-placeholder">
+            <div class="placeholder-icon">🔲</div>
+            <p>Scan a participant pass to display verification details.</p>
+          </div>
+
+          <!-- Dynamic Verification Panel -->
+          <div id="participant-panel" class="participant-panel hidden">
+            <div id="status-banner" class="status-banner">
+              <!-- VERIFIED / ALREADY CHECKED IN / INVALID -->
+            </div>
+
+            <div class="participant-details">
+              <div class="detail-row">
+                <span class="detail-label">Participant Name:</span>
+                <span class="detail-value" id="part-name">-</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Registration ID:</span>
+                <span class="detail-value" id="part-reg-id">-</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Team Name:</span>
+                <span class="detail-value" id="part-team">-</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">College / Institution:</span>
+                <span class="detail-value" id="part-college">-</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Role:</span>
+                <span class="detail-value" id="part-role">-</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Attendance Status:</span>
+                <span class="detail-value" id="part-status-badge">-</span>
+              </div>
+              <div class="detail-row" id="checkin-time-row">
+                <span class="detail-label">Check-in Time:</span>
+                <span class="detail-value" id="part-checkin-time">-</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons mt-4">
+              <button id="btn-mark-present" class="btn primary btn-block large-btn">✓ MARK PRESENT</button>
+              <button id="btn-scan-next" class="btn secondary btn-block large-btn mt-2 hidden" onclick="resetScannerUI()">SCAN NEXT PASS</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="view-section hidden">
+      <div class="dashboard-container">
+        <div class="dashboard-header">
+          <h2 class="dash-title">Buildora 2026 Admin Dashboard</h2>
+          <button id="btn-refresh-stats" class="btn secondary small">🔄 Refresh Metrics</button>
+        </div>
+
+        <!-- Action Controls Grid -->
+        <div class="dash-grid">
+          <div class="dash-card glass-panel" id="card-download-public">
+            <h3>QR Pass Distribution</h3>
+            <p class="small">Generate & download all official Buildora entry passes.</p>
+            <button id="btn-download-qr" class="btn primary action-btn">📥 Download All Buildora Passes (ZIP)</button>
+          </div>
+
+          <div class="dash-card glass-panel management-control hidden" id="card-upload">
+            <h3>Bulk Participant Upload (CSV)</h3>
+            <p class="small">CSV Headers: `participant_name`, `team_name`, `registration_id`</p>
+            <input type="file" id="csv-file" accept=".csv" />
+            <button id="btn-upload-csv" class="btn primary">Upload CSV</button>
+            <div id="upload-msg"></div>
+          </div>
+
+          <div class="dash-card glass-panel management-control hidden" id="card-actions">
+            <h3>Management Controls</h3>
+            <button id="btn-reset-db" class="btn warning action-btn">🔄 Reset All Attendance Records</button>
+            <button id="btn-delete-db" class="btn danger action-btn">🗑️ Delete All Participants</button>
+          </div>
+        </div>
+
+        <!-- Fast Key Metrics Grid -->
+        <div class="metrics-grid mt-4">
+          <div class="metric-card glass-panel blue-glow">
+            <div class="metric-title">👥 Registered Participants</div>
+            <div class="metric-value" id="metric-total">0</div>
+          </div>
+          <div class="metric-card glass-panel green-glow">
+            <div class="metric-title">✅ Present</div>
+            <div class="metric-value" id="metric-present">0</div>
+          </div>
+          <div class="metric-card glass-panel orange-glow">
+            <div class="metric-title">⏳ Pending</div>
+            <div class="metric-value" id="metric-pending">0</div>
+          </div>
+          <div class="metric-card glass-panel purple-glow">
+            <div class="metric-title">📈 Attendance Rate</div>
+            <div class="metric-value" id="metric-percentage">0%</div>
+          </div>
+        </div>
+
+        <!-- Directory Table -->
+        <div class="table-container glass-panel mt-4">
+          <div class="table-header">
+            <h3>Official Participants Directory</h3>
+            <button id="btn-refresh-passes" class="btn secondary small">Load Directory Table</button>
+          </div>
+          
+          <div class="table-responsive">
+            <table id="passes-table">
+              <thead>
+                <tr>
+                    <th>Participant Name</th>
+                    <th>Team Name</th>
+                    <th>College / Branch</th>
+                    <th>Attendance Status</th>
+                    <th>Check-in Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Click 'Load Directory Table' to view full participant list.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
