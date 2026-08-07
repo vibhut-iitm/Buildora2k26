@@ -197,6 +197,9 @@ async function verifyDirectSupabase(token, action) {
             document.getElementById("btn-scan-next").classList.remove("hidden");
             fetchStats();
             fetchPasses();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
             return;
         }
 
@@ -339,6 +342,10 @@ document.getElementById("btn-mark-present").addEventListener("click", () => {
         fetchPasses();
 
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     })
     .catch(err => {
         console.warn("Backend mark present failed, attempting direct Supabase fallback...", err);
