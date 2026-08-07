@@ -65,60 +65,19 @@ let scannerIsRunning = false;
 let currentScannedToken = "";
 
 function startScanner() {
-    if (!document.getElementById("reader")) return;
-    
-    // Check for secure context (HTTPS requirement)
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        document.getElementById("reader").innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #f59e0b;">
-                <p style="font-weight: 700;">⚠️ HTTPS Required for Camera Access</p>
-                <p style="font-size: 0.85rem; margin-top: 6px;">Browsers require HTTPS to access camera. Please open the secure HTTPS URL.</p>
-            </div>
-        `;
-        return;
-    }
-
-    if (scannerIsRunning && html5QrCode) {
-        return;
-    }
-
     html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 25, qrbox: { width: 250, height: 250 } };
-
-    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-    .then(() => {
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 25, qrbox: { width: 250, height: 250 } },
+        onScanSuccess
+    ).then(() => {
         scannerIsRunning = true;
         if (navigator.vibrate) navigator.vibrate(40);
         console.log("Buildora QR Scanner ready.");
-    })
-    .catch(err => {
-        console.warn("Environment camera start failed, trying fallback...", err);
-        Html5Qrcode.getCameras().then(devices => {
-            if (devices && devices.length > 0) {
-                // Select back camera or first device
-                const cameraId = devices[devices.length - 1].id;
-                html5QrCode.start(cameraId, config, onScanSuccess)
-                .then(() => { scannerIsRunning = true; })
-                .catch(showCameraManualButton);
-            } else {
-                showCameraManualButton(err);
-            }
-        }).catch(showCameraManualButton);
+    }).catch(err => {
+        console.error("Camera access failed", err);
+        document.getElementById("reader").innerHTML = "<p style='color:#ef4444; padding:20px; text-align:center;'>Camera access denied or unreadable.</p>";
     });
-}
-
-function showCameraManualButton(err) {
-    document.getElementById("reader").innerHTML = `
-        <div style="padding: 30px 15px; text-align: center;">
-            <p style="color: #ef4444; font-weight: 700; margin-bottom: 8px;">📷 Camera Access Required</p>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Please allow camera permission in your browser to scan passes.</p>
-            <button onclick="requestCameraExplicitly()" class="btn primary">📷 Enable Camera & Scan</button>
-        </div>
-    `;
-}
-
-function requestCameraExplicitly() {
-    startScanner();
 }
 
 function onScanSuccess(decodedText) {
@@ -384,4 +343,6 @@ window.addEventListener("load", () => {
     if (localStorage.getItem("isLoggedIn") === "true") {
         unlockManagement();
     }
+    // Auto-start the QR scanner when page loads
+    startScanner();
 });
