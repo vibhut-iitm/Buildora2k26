@@ -207,7 +207,7 @@ class Database:
                         "student_name": row.get("participant_name"),
                         "participant_name": row.get("participant_name"),
                         "team_name": row.get("team_name"),
-                        "branch": row.get("team_name", "General"),
+                        "branch": row.get("college_name") or row.get("team_name", "General"),
                         "Status": "Checked In" if row.get("attendance_status") in ["Present", "Checked In"] else "Valid",
                         "attendance_status": row.get("attendance_status", "Pending"),
                         "CheckInTime": row.get("check_in_time"),
@@ -232,7 +232,7 @@ class Database:
                 r["used"] = is_present
                 r["Status"] = "Checked In" if is_present else "Valid"
                 r["token"] = r.get("qr_token")
-                r["branch"] = r.get("team_name")
+                r["branch"] = r.get("college_name") or r.get("team_name")
             return data
 
         self.cursor.execute("SELECT * FROM passes")
