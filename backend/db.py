@@ -340,7 +340,8 @@ class Database:
         from datetime import datetime, timedelta
         utc_now = datetime.utcnow()
         ist_now = utc_now + timedelta(hours=5, minutes=30)
-        now = ist_now.strftime("%I:%M %p")
+        now_str = ist_now.strftime("%I:%M %p")
+        iso_now = ist_now.isoformat()
         
         db_attendance = "Present" if status in ["Checked In", "Present"] else status
 
@@ -349,19 +350,19 @@ class Database:
             res = requests.patch(
                 f"{SUPABASE_URL}/rest/v1/Buildora2k26?qr_token=eq.{token}",
                 headers=self.headers,
-                json={"attendance_status": db_attendance, "check_in_time": now},
+                json={"attendance_status": db_attendance, "check_in_time": iso_now},
                 timeout=5
             )
             # Also update passes legacy table for backward safety
             requests.patch(
                 f"{SUPABASE_URL}/rest/v1/passes?token=eq.{token}",
                 headers=self.headers,
-                json={"Status": "Checked In", "CheckInTime": now},
+                json={"Status": "Checked In", "CheckInTime": now_str},
                 timeout=5
             )
         else:
-            self.cursor.execute("UPDATE projects SET attendance_status=?, check_in_time=? WHERE qr_token=?", (db_attendance, now, token))
-            self.cursor.execute("UPDATE passes SET Status=?, CheckInTime=? WHERE token=?", ("Checked In", now, token))
+            self.cursor.execute("UPDATE projects SET attendance_status=?, check_in_time=? WHERE qr_token=?", (db_attendance, now_str, token))
+            self.cursor.execute("UPDATE passes SET Status=?, CheckInTime=? WHERE token=?", ("Checked In", now_str, token))
             self.conn.commit()
 
     def reset_all(self):

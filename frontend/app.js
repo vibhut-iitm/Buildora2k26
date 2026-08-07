@@ -1,6 +1,6 @@
 // --- Supabase Direct Config (for Netlify/static hosting without backend) ---
 const SUPABASE_URL = "https://buhqceccffabdvmdybjv.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1aHFjZWNjZmZhYmR2bWR5Ymp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwOTU0NTEsImV4cCI6MjEwMTY3MTQ1MX0.y6XslDB_PxoRBFvOGXYFguspK151A06oSeforfj41Tk";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1aHFjZWNjZmZhYmR2bWR5Ymp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjA5NTQ1MSwiZXhwIjoyMTAxNjcxNDUxfQ.HlhMZR98jDs3CxAjaIzEPiaOgUOxoLSH_teB4LCv5io";
 const SUPABASE_TABLE = "Buildora2k26";
 
 const SUPABASE_HEADERS = {
@@ -176,6 +176,7 @@ async function verifyDirectSupabase(token, action) {
         const p = rows[0];
         const isPresent = p.attendance_status === "Present" || p.attendance_status === "Checked In";
         const nowTime = new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+        const isoTime = new Date().toISOString();
 
         if (action === "mark") {
             if (!isPresent) {
@@ -184,7 +185,7 @@ async function verifyDirectSupabase(token, action) {
                     {
                         method: "PATCH",
                         headers: SUPABASE_HEADERS,
-                        body: JSON.stringify({ attendance_status: "Present", check_in_time: nowTime })
+                        body: JSON.stringify({ attendance_status: "Present", check_in_time: isoTime })
                     }
                 );
             }
