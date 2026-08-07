@@ -85,7 +85,7 @@ class Database:
             try:
                 # 1. Try querying projects table first
                 res = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/projects?qr_token=eq.{token}",
+                    f"{SUPABASE_URL}/rest/v1/Buildora2k26?qr_token=eq.{token}",
                     headers=self.headers,
                     timeout=5
                 )
@@ -170,7 +170,7 @@ class Database:
         if self.mode == 'supabase':
             try:
                 res = requests.get(
-                    f"{SUPABASE_URL}/rest/v1/projects?select=qr_token,participant_name,team_name,college_name,attendance_status,check_in_time,registration_id",
+                    f"{SUPABASE_URL}/rest/v1/Buildora2k26?select=qr_token,participant_name,team_name,college_name,attendance_status,check_in_time,registration_id",
                     headers=self.headers,
                     timeout=8
                 )
@@ -312,7 +312,7 @@ class Database:
                 "attendance_status": "Pending"
             }
             try:
-                res = requests.post(f"{SUPABASE_URL}/rest/v1/projects", headers=self.headers, json=payload, timeout=5)
+                res = requests.post(f"{SUPABASE_URL}/rest/v1/Buildora2k26", headers=self.headers, json=payload, timeout=5)
                 # Check for missing table error
                 if res.status_code == 404 or (res.status_code >= 400 and isinstance(res.json(), dict) and res.json().get("code") == "PGRST205"):
                     # Fallback to legacy passes table
@@ -347,7 +347,7 @@ class Database:
         if self.mode == 'supabase':
             # Update projects table first
             res = requests.patch(
-                f"{SUPABASE_URL}/rest/v1/projects?qr_token=eq.{token}",
+                f"{SUPABASE_URL}/rest/v1/Buildora2k26?qr_token=eq.{token}",
                 headers=self.headers,
                 json={"attendance_status": db_attendance, "check_in_time": now},
                 timeout=5
@@ -371,7 +371,7 @@ class Database:
 
         if self.mode == 'supabase':
             requests.patch(
-                f"{SUPABASE_URL}/rest/v1/projects?qr_token=not.is.null",
+                f"{SUPABASE_URL}/rest/v1/Buildora2k26?qr_token=not.is.null",
                 headers=self.headers,
                 json={"attendance_status": "Pending", "check_in_time": None},
                 timeout=5
@@ -393,7 +393,7 @@ class Database:
             return
 
         if self.mode == 'supabase':
-            requests.delete(f"{SUPABASE_URL}/rest/v1/projects?qr_token=not.is.null", headers=self.headers, timeout=5)
+            requests.delete(f"{SUPABASE_URL}/rest/v1/Buildora2k26?qr_token=not.is.null", headers=self.headers, timeout=5)
             requests.delete(f"{SUPABASE_URL}/rest/v1/passes?token=not.is.null", headers=self.headers, timeout=5)
         else:
             self.cursor.execute("DELETE FROM projects")

@@ -65,6 +65,11 @@ let scannerIsRunning = false;
 let currentScannedToken = "";
 
 function startScanner() {
+    if (scannerIsRunning) return;
+    const readerEl = document.getElementById("reader");
+    if (!readerEl) return;
+    readerEl.innerHTML = "";
+
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start(
         { facingMode: "environment" },
@@ -75,8 +80,9 @@ function startScanner() {
         if (navigator.vibrate) navigator.vibrate(40);
         console.log("Buildora QR Scanner ready.");
     }).catch(err => {
+        scannerIsRunning = false;
         console.error("Camera access failed", err);
-        document.getElementById("reader").innerHTML = "<p style='color:#ef4444; padding:20px; text-align:center;'>Camera access denied or unreadable.</p>";
+        readerEl.innerHTML = "<p style='color:#ef4444; padding:20px; text-align:center;'>Camera access denied or unreadable.</p>";
     });
 }
 
@@ -120,13 +126,13 @@ function displayParticipantPanel(data) {
 
     if (data.status === "invalid") {
         banner.className = "status-banner invalid";
-        banner.innerText = "✕ INVALID QR / PARTICIPANT NOT FOUND";
-        document.getElementById("part-name").innerText = "Unknown";
+        banner.innerText = "✕ UNREGISTERED / FAKE PASS";
+        document.getElementById("part-name").innerText = "Unregistered Pass";
         document.getElementById("part-reg-id").innerText = "N/A";
         document.getElementById("part-team").innerText = "N/A";
-        document.getElementById("part-college").innerText = "N/A";
+        document.getElementById("part-college").innerText = "IERT";
         document.getElementById("part-role").innerText = "N/A";
-        document.getElementById("part-status-badge").innerHTML = `<span class="badge danger">Invalid</span>`;
+        document.getElementById("part-status-badge").innerHTML = `<span class="badge danger">Unregistered Pass</span>`;
         document.getElementById("checkin-time-row").classList.add("hidden");
         btnMark.classList.add("hidden");
         btnNext.classList.remove("hidden");
@@ -135,19 +141,19 @@ function displayParticipantPanel(data) {
     }
 
     // Populate details
-    document.getElementById("part-name").innerText = data.name || "Unknown";
+    document.getElementById("part-name").innerText = data.name || data.participant_name || "Unknown";
     document.getElementById("part-reg-id").innerText = data.registration_id || "N/A";
     document.getElementById("part-team").innerText = data.team_name || "N/A";
-    document.getElementById("part-college").innerText = data.college || "N/A";
+    document.getElementById("part-college").innerText = data.college || data.college_name || "IERT";
     document.getElementById("part-role").innerText = data.role || "Participant";
 
-    const isAlreadyPresent = data.already_checked_in || data.attendance_status === "Present";
+    const isAlreadyPresent = data.already_checked_in || data.attendance_status === "Present" || data.status === "used";
     document.getElementById("checkin-time-row").classList.remove("hidden");
 
     if (isAlreadyPresent) {
         banner.className = "status-banner used";
-        banner.innerText = "⚠️ ALREADY CHECKED IN";
-        document.getElementById("part-status-badge").innerHTML = `<span class="badge orange">Present</span>`;
+        banner.innerText = "🚨 ALREADY CHECKED IN — RE-ENTRY DENIED";
+        document.getElementById("part-status-badge").innerHTML = `<span class="badge danger">Already Checked In</span>`;
         document.getElementById("part-checkin-time").innerText = data.check_in_time || "Already Marked";
         btnMark.classList.add("hidden");
         btnNext.classList.remove("hidden");
@@ -227,9 +233,7 @@ function playAudio(type) {
     } catch(e) {}
 }
 
-window.addEventListener("load", () => {
-    startScanner();
-});
+// window.addEventListener load handled below
 
 // --- Fast Metrics & Dashboard Logic ---
 function fetchStats() {

@@ -16,7 +16,7 @@ def verify():
     try:
         participant = db.find_by_token(token)
         if not participant:
-            return jsonify({"status": "invalid", "message": "INVALID QR / PARTICIPANT NOT FOUND"})
+            return jsonify({"status": "invalid", "message": "UNREGISTERED / FAKE PASS"})
 
         name = participant.get("participant_name") or participant.get("student_name", "Unknown")
         reg_id = participant.get("registration_id") or token

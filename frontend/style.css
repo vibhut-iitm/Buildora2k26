@@ -170,9 +170,9 @@ body {
 }
 
 .status-banner.used {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid var(--warning);
-  color: #fbbf24;
+  background: rgba(239, 68, 68, 0.25);
+  border: 2px solid var(--danger);
+  color: #ef4444;
 }
 
 .status-banner.invalid {
