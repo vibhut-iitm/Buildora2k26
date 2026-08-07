@@ -1,3 +1,14 @@
+// --- Supabase Direct Config (for Netlify/static hosting without backend) ---
+const SUPABASE_URL = "https://buhqceccffabdvmdybjv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1aHFjZWNjZmZhYmR2bWR5Ymp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwOTU0NTEsImV4cCI6MjEwMTY3MTQ1MX0.y6XslDB_PxoRBFvOGXYFguspK151A06oSeforfj41Tk";
+const SUPABASE_TABLE = "Buildora2k26";
+
+const SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json"
+};
+
 function getApiBase() {
     const saved = localStorage.getItem("API_BASE");
     if (saved && saved.trim()) return saved.trim().replace(/\/+$/, "");
@@ -8,10 +19,34 @@ function getApiBase() {
 
     return isLocal
         ? "http://127.0.0.1:8000"
-        : "https://farewell-system-ulp2.onrender.com";
+        : "";
 }
 
 let API_BASE = getApiBase();
+let useDirectSupabase = !API_BASE;
+
+// Test backend connectivity, fallback to direct Supabase if unavailable
+async function checkBackendAndFallback() {
+    if (!API_BASE) {
+        useDirectSupabase = true;
+        console.log("No backend configured. Using direct Supabase mode.");
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/health`, { timeout: 3000 });
+        if (res.ok) {
+            useDirectSupabase = false;
+            console.log("Backend is live:", API_BASE);
+        } else {
+            useDirectSupabase = true;
+            console.log("Backend returned error. Falling back to direct Supabase.");
+        }
+    } catch(e) {
+        useDirectSupabase = true;
+        console.log("Backend unreachable. Falling back to direct Supabase.");
+    }
+}
+
 
 // --- Toast Non-Blocking UI Helper ---
 function showToast(msg) {
@@ -243,19 +278,45 @@ function playAudio(type) {
 // window.addEventListener load handled below
 
 // --- Fast Metrics & Dashboard Logic ---
-function fetchStats() {
-    fetch(`${API_BASE}/stats`)
-    .then(res => res.json())
-    .then(res => {
-        if (res.status === "success") {
-            const d = res.data;
+async function fetchStats() {
+    if (useDirectSupabase) {
+        return fetchStatsDirectSupabase();
+    }
+    try {
+        const res = await fetch(`${API_BASE}/stats`);
+        const data = await res.json();
+        if (data.status === "success") {
+            const d = data.data;
             document.getElementById("metric-total").innerText = d.total || 0;
             document.getElementById("metric-present").innerText = d.present || 0;
             document.getElementById("metric-pending").innerText = d.pending || 0;
             document.getElementById("metric-percentage").innerText = `${d.percentage || 0}%`;
         }
-    })
-    .catch(err => console.error("Stats fetch error", err));
+    } catch(err) {
+        console.warn("Backend stats failed, trying direct Supabase...", err);
+        return fetchStatsDirectSupabase();
+    }
+}
+
+async function fetchStatsDirectSupabase() {
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=attendance_status`,
+            { headers: SUPABASE_HEADERS }
+        );
+        const rows = await res.json();
+        if (!Array.isArray(rows)) { console.error("Supabase returned non-array:", rows); return; }
+        const total = rows.length;
+        const present = rows.filter(r => r.attendance_status === "Present" || r.attendance_status === "Checked In").length;
+        const pending = total - present;
+        const percentage = total > 0 ? Math.round((present / total * 100) * 10) / 10 : 0;
+        document.getElementById("metric-total").innerText = total;
+        document.getElementById("metric-present").innerText = present;
+        document.getElementById("metric-pending").innerText = pending;
+        document.getElementById("metric-percentage").innerText = `${percentage}%`;
+    } catch(e) {
+        console.error("Direct Supabase stats error:", e);
+    }
 }
 
 document.getElementById("btn-refresh-stats").addEventListener("click", () => fetchStats());
