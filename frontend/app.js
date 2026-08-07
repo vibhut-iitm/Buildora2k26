@@ -133,7 +133,6 @@ function onScanSuccess(decodedText) {
     const readerBox = document.getElementById("reader");
     if (readerBox) {
         readerBox.style.borderColor = "#4ade80";
-        setTimeout(() => readerBox.style.borderColor = "var(--glass-border)", 400);
     }
 
     showToast("Verifying participant pass...");
@@ -229,6 +228,8 @@ function displayParticipantPanel(data) {
     defaultPlaceholder.classList.add("hidden");
     participantPanel.classList.remove("hidden");
 
+    const reader = document.getElementById("reader");
+
     if (data.status === "invalid") {
         banner.className = "status-banner invalid";
         banner.innerText = "✕ UNREGISTERED / FAKE PASS";
@@ -241,6 +242,10 @@ function displayParticipantPanel(data) {
         document.getElementById("checkin-time-row").classList.add("hidden");
         btnMark.classList.add("hidden");
         btnNext.classList.remove("hidden");
+        
+        if (reader) reader.style.borderColor = "#ef4444";
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+
         playAudio("invalid");
         return;
     }
@@ -262,6 +267,10 @@ function displayParticipantPanel(data) {
         document.getElementById("part-checkin-time").innerText = data.check_in_time || "Already Marked";
         btnMark.classList.add("hidden");
         btnNext.classList.remove("hidden");
+
+        if (reader) reader.style.borderColor = "#ef4444";
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+
         playAudio("used");
     } else {
         banner.className = "status-banner valid";
@@ -270,6 +279,10 @@ function displayParticipantPanel(data) {
         document.getElementById("part-checkin-time").innerText = "Not Marked Yet";
         btnMark.classList.remove("hidden");
         btnNext.classList.add("hidden");
+
+        if (reader) reader.style.borderColor = "#4ade80";
+        if (navigator.vibrate) navigator.vibrate(150);
+
         playAudio("valid");
     }
 }
@@ -286,6 +299,12 @@ function displayInvalidPanel(msg) {
     
     document.getElementById("btn-mark-present").classList.add("hidden");
     document.getElementById("btn-scan-next").classList.remove("hidden");
+
+    const reader = document.getElementById("reader");
+    if (reader) reader.style.borderColor = "#ef4444";
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+
+    playAudio("invalid");
 }
 
 // Mark Present Handler
@@ -569,8 +588,18 @@ if (btnSaveApi) {
 const btnReset = document.getElementById("btn-reset-db");
 if (btnReset) {
     btnReset.addEventListener("click", () => {
+        const password = prompt("Enter administrator password to confirm this action:");
+        if (password !== "buildoraiert2k26") {
+            alert("Incorrect password. Action cancelled.");
+            return;
+        }
         if (!confirm("Are you sure you want to reset all attendance records back to Pending?")) return;
         showToast("Resetting attendance records...");
+        
+        if (useDirectSupabase) {
+            return resetDirectSupabase();
+        }
+
         fetch(`${API_BASE}/reset`, { method: "POST" })
         .then(res => res.json())
         .then(data => {
@@ -580,17 +609,48 @@ if (btnReset) {
             fetchPasses();
         })
         .catch(err => {
-            hideToast();
-            alert("Error resetting attendance records.");
+            console.warn("Backend reset failed, trying direct Supabase...", err);
+            resetDirectSupabase();
         });
     });
+}
+
+async function resetDirectSupabase() {
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?qr_token=not.is.null`,
+            {
+                method: "PATCH",
+                headers: SUPABASE_HEADERS,
+                body: JSON.stringify({ attendance_status: "Pending", check_in_time: null })
+            }
+        );
+        hideToast();
+        alert("Attendance records reset successfully.");
+        fetchStats();
+        fetchPasses();
+    } catch(e) {
+        hideToast();
+        console.error("Direct Supabase reset error:", e);
+        alert("Error resetting attendance records.");
+    }
 }
 
 const btnDelete = document.getElementById("btn-delete-db");
 if (btnDelete) {
     btnDelete.addEventListener("click", () => {
+        const password = prompt("Enter administrator password to confirm this action:");
+        if (password !== "buildoraiert2k26") {
+            alert("Incorrect password. Action cancelled.");
+            return;
+        }
         if (!confirm("WARNING: Are you sure you want to DELETE ALL participants from the database? This cannot be undone!")) return;
         showToast("Deleting all participants...");
+        
+        if (useDirectSupabase) {
+            return deleteDirectSupabase();
+        }
+
         fetch(`${API_BASE}/delete-all`, { method: "POST" })
         .then(res => res.json())
         .then(data => {
@@ -600,10 +660,30 @@ if (btnDelete) {
             fetchPasses();
         })
         .catch(err => {
-            hideToast();
-            alert("Error deleting participants.");
+            console.warn("Backend delete-all failed, trying direct Supabase...", err);
+            deleteDirectSupabase();
         });
     });
+}
+
+async function deleteDirectSupabase() {
+    try {
+        await fetch(
+            `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?qr_token=not.is.null`,
+            {
+                method: "DELETE",
+                headers: SUPABASE_HEADERS
+            }
+        );
+        hideToast();
+        alert("All participants deleted.");
+        fetchStats();
+        fetchPasses();
+    } catch(e) {
+        hideToast();
+        console.error("Direct Supabase delete error:", e);
+        alert("Error deleting participants.");
+    }
 }
 
 // Auto-unlock & auto-load stats/passes on window load
