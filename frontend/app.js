@@ -19,7 +19,7 @@ function getApiBase() {
 
     return isLocal
         ? "http://127.0.0.1:8000"
-        : "";
+        : "https://buildora2k26.onrender.com";
 }
 
 let API_BASE = getApiBase();
