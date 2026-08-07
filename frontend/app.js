@@ -13,13 +13,7 @@ function getApiBase() {
     const saved = localStorage.getItem("API_BASE");
     if (saved && saved.trim()) return saved.trim().replace(/\/+$/, "");
 
-    const isLocal = window.location.hostname === "127.0.0.1" || 
-                    window.location.hostname === "localhost" || 
-                    window.location.hostname.startsWith("192.168.");
-
-    return isLocal
-        ? "http://127.0.0.1:8000"
-        : "https://buildora2k26.onrender.com";
+    return "https://buildora2k26.onrender.com";
 }
 
 let API_BASE = getApiBase();
