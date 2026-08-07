@@ -365,8 +365,36 @@ function fetchPasses() {
 }
 
 // Download QR ZIP
-document.getElementById("btn-download-qr").addEventListener("click", () => {
-    window.location.href = `${API_BASE}/qr-codes`;
+document.getElementById("btn-download-qr").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-download-qr");
+    const originalText = btn.innerText;
+    btn.innerText = "⏳ Checking server...";
+    btn.disabled = true;
+
+    try {
+        // Quick health check before triggering download
+        const healthRes = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+        if (!healthRes.ok) throw new Error("Backend server is not responding.");
+
+        btn.innerText = "⏳ Download starting...";
+        showToast("Opening download — your browser will handle the file. Please wait...");
+
+        // Use direct navigation in a new tab — browser's native download manager
+        // handles large files reliably (unlike fetch which can fail on big responses)
+        window.open(`${API_BASE}/qr-codes`, "_blank");
+
+        setTimeout(() => {
+            hideToast();
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }, 3000);
+    } catch (err) {
+        hideToast();
+        console.error("Download failed:", err);
+        alert(`Cannot reach the backend server at:\n${API_BASE}\n\nMake sure the server is running.`);
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 });
 
 // CSV Upload

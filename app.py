@@ -15,4 +15,4 @@ spec.loader.exec_module(backend_app_module)
 app = backend_app_module.app
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, port=8000)

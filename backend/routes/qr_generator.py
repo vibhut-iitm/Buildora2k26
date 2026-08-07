@@ -45,7 +45,7 @@ def make_gatepass_turbo(token: str, template_img, box) -> bytes:
     img.paste(qr_final, (paste_x, paste_y))
 
     out = io.BytesIO()
-    img.save(out, format="PNG", optimize=False)
+    img.save(out, format="JPEG", quality=85, optimize=True)
     return out.getvalue()
 
 @qr_bp.route("/qr-codes", methods=["GET"])
@@ -59,7 +59,7 @@ def generate_qr():
         template_img, box = get_resources()
         memory_file = io.BytesIO()
         
-        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_STORED) as zf:
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             from concurrent.futures import ThreadPoolExecutor
             
             def process_participant(p):
@@ -73,7 +73,7 @@ def generate_qr():
                 safe_branch = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(branch)).strip().lower().replace(" ", "_")
                 safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in name).strip().lower().replace(" ", "_")
                 
-                return f"buildora_passes/{safe_branch}/{safe_name}.png", pass_bytes
+                return f"buildora_passes/{safe_branch}/{safe_name}.jpg", pass_bytes
 
             with ThreadPoolExecutor(max_workers=10) as executor:
                 results = executor.map(process_participant, participants)
@@ -82,7 +82,9 @@ def generate_qr():
                         zf.writestr(res[0], res[1])
 
         memory_file.seek(0)
-        return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='buildora_2026_passes.zip')
+        response = send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='buildora_2026_passes.zip')
+        response.headers['Content-Length'] = memory_file.getbuffer().nbytes
+        return response
     except Exception as e:
         import traceback
         traceback.print_exc()
