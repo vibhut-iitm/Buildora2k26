@@ -241,6 +241,11 @@ document.getElementById("btn-mark-present").addEventListener("click", () => {
         
         document.getElementById("btn-mark-present").classList.add("hidden");
         document.getElementById("btn-scan-next").classList.remove("hidden");
+        
+        // Immediately refresh dashboard metrics and directory list
+        fetchStats();
+        fetchPasses();
+
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     })
     .catch(err => {
@@ -489,9 +494,10 @@ if (btnDelete) {
 }
 
 // Auto-unlock & auto-load stats/passes on window load
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
     unlockManagement();
     updateApiDisplay();
+    await checkBackendAndFallback();
     startScanner();
     fetchStats();
     fetchPasses();
