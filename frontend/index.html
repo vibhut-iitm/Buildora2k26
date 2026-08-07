@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buildora Hackathon 2026 | QR Entry & Attendance System</title>
+  <script>
+    if (localStorage.getItem("isLoggedIn") !== "true") {
+      window.location.href = "login.html";
+    }
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -22,6 +27,7 @@
     <div class="nav-links">
       <button id="nav-scanner" class="active">📷 Scanner</button>
       <button id="nav-dashboard">📊 Dashboard</button>
+      <button id="nav-logout" class="btn secondary small" onclick="logout()">🔒 Logout</button>
     </div>
   </nav>
 

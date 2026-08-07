@@ -19,6 +19,12 @@ function hideToast() {
     if (toast) toast.classList.add("hidden");
 }
 
+// --- Logout Handler ---
+function logout() {
+    localStorage.removeItem("isLoggedIn");
+    window.location.href = "login.html";
+}
+
 // --- Navigation Logic ---
 const navScanner = document.getElementById("nav-scanner");
 const navDashboard = document.getElementById("nav-dashboard");
