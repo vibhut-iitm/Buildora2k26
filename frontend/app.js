@@ -359,36 +359,21 @@ function fetchPasses() {
 }
 
 // Download QR ZIP
-document.getElementById("btn-download-qr").addEventListener("click", async () => {
+document.getElementById("btn-download-qr").addEventListener("click", () => {
     const btn = document.getElementById("btn-download-qr");
     const originalText = btn.innerText;
-    btn.innerText = "⏳ Checking server...";
+    btn.innerText = "⏳ Download starting...";
     btn.disabled = true;
+    showToast("Generating passes ZIP... Your download will start shortly.");
 
-    try {
-        // Quick health check before triggering download
-        const healthRes = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
-        if (!healthRes.ok) throw new Error("Backend server is not responding.");
+    // Direct browser navigation bypassing fetch (works even if adblockers block background fetch calls)
+    window.open(`${API_BASE}/qr-codes`, "_blank");
 
-        btn.innerText = "⏳ Download starting...";
-        showToast("Opening download — your browser will handle the file. Please wait...");
-
-        // Use direct navigation in a new tab — browser's native download manager
-        // handles large files reliably (unlike fetch which can fail on big responses)
-        window.open(`${API_BASE}/qr-codes`, "_blank");
-
-        setTimeout(() => {
-            hideToast();
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }, 3000);
-    } catch (err) {
+    setTimeout(() => {
         hideToast();
-        console.error("Download failed:", err);
-        alert(`Cannot reach the backend server at:\n${API_BASE}\n\nMake sure the server is running.`);
         btn.innerText = originalText;
         btn.disabled = false;
-    }
+    }, 4000);
 });
 
 // CSV Upload
