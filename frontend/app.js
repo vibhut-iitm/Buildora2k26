@@ -58,6 +58,7 @@ function hideToast() {
 // --- Logout Handler ---
 function logout() {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("isLoggedIn_IERTCSE2027");
     window.location.href = "login.html";
 }
 
